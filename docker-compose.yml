@@ -1,0 +1,71 @@
+services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL database
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: threatview
+      POSTGRES_USER: threatview_user
+      POSTGRES_PASSWORD: threatview_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U threatview_user -d threatview"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - threatview_net
+
+  # ---------------------------------------------------------------------------
+  # Flask backend API
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://threatview_user:threatview_pass@db:5432/threatview
+      FLASK_ENV: production
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - threatview_net
+
+  # ---------------------------------------------------------------------------
+  # React frontend (Nginx)
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:5000/api
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - threatview_net
+
+volumes:
+  postgres_data:
+
+networks:
+  threatview_net:
+    driver: bridge

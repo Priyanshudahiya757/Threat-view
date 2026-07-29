@@ -1,0 +1,96 @@
+# =============================================================================
+# ThreatView — root .gitignore
+# =============================================================================
+
+# -------------------------
+# Python / Backend
+# -------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env
+ENV/
+
+# Distribution / packaging
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# SQLite databases (dev only)
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Coverage / test artifacts
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+
+# AI model artifacts
+backend/data/
+
+# -------------------------
+# Environment / Secrets
+# -------------------------
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# -------------------------
+# Node / Frontend
+# -------------------------
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -------------------------
+# Docker
+# -------------------------
+.dockerignore
+
+# -------------------------
+# IDEs & OS
+# -------------------------
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
