@@ -31,10 +31,11 @@ export function AuthProvider({ children }) {
     const stored = localStorage.getItem(STORAGE_KEY_ACCESS)
     if (!stored) { setLoading(false); return }
 
+    const timer = setTimeout(() => setLoading(false), 3000)
+
     getMe()
       .then(setUser)
       .catch(() => {
-        // Token expired → try refresh
         const refresh = localStorage.getItem(STORAGE_KEY_REFRESH)
         if (!refresh) { clearTokens(); return }
         return apiRefresh(refresh)
@@ -44,7 +45,10 @@ export function AuthProvider({ children }) {
           })
           .catch(clearTokens)
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        clearTimeout(timer)
+        setLoading(false)
+      })
   }, [clearTokens, saveTokens])
 
   // ── Actions ─────────────────────────────────────────────────────────────────

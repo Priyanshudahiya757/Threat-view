@@ -7,14 +7,16 @@ import { useAuth } from '../context/AuthContext'
  * While the auth state is being verified (initial token check) it renders
  * nothing to prevent a flash of the login screen.
  */
+import LoadingSpinner from './LoadingSpinner'
+
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
   const location = useLocation()
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-        <span className="spinner-border" style={{ color: 'var(--tv-accent-blue)' }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', backgroundColor: 'var(--tv-bg-base, #0a0e1a)' }}>
+        <LoadingSpinner label="Connecting to ThreatView…" />
       </div>
     )
   }
