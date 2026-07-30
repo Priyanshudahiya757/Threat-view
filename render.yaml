@@ -37,8 +37,4 @@ services:
         destination: "/index.html"
     envVars:
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: threatview-backend
-          property: url
-          append: "/api"
+        value: https://threatview-backend.onrender.com/api
