@@ -19,9 +19,10 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
     JWT_ACCESS_TOKEN_EXPIRES  = int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES",  900))   # 15 min
-    JWT_REFRESH_TOKEN_EXPIRES = int(os.environ.get("JWT_REFRESH_TOKEN_EXPIRES", 604800)) # 7 days
-    SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///threatview.db")
-    OTX_API_KEY = os.environ.get("OTX_API_KEY", "")
+    _raw_db_url = os.environ.get("DATABASE_URL", "sqlite:///threatview.db")
+    if _raw_db_url.startswith("postgresql://"):
+        _raw_db_url = _raw_db_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    SQLALCHEMY_DATABASE_URI = _raw_db_url
     PHISHTANK_APP_KEY = os.environ.get("PHISHTANK_APP_KEY", "")
     URLHAUS_URL = os.environ.get("URLHAUS_URL", "https://urlhaus-api.abuse.ch/v1/urls/recent")
 
