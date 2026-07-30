@@ -4,7 +4,7 @@ const STORAGE_KEY_ACCESS  = 'tv_access_token'
 const STORAGE_KEY_REFRESH = 'tv_refresh_token'
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 })
