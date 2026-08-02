@@ -10,6 +10,7 @@ from routes.report_routes import report_bp
 from routes.alert_routes import alerts_bp
 from routes.export_routes import export_bp
 from routes.anomaly_routes import anomaly_bp
+from routes.cron_routes import cron_bp
 
 
 def register_blueprints(app) -> None:
@@ -22,3 +23,4 @@ def register_blueprints(app) -> None:
     app.register_blueprint(alerts_bp,  url_prefix="/api")
     app.register_blueprint(export_bp,  url_prefix="/api")
     app.register_blueprint(anomaly_bp, url_prefix="/api")
+    app.register_blueprint(cron_bp,    url_prefix="/api")

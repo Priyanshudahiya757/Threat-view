@@ -18,8 +18,6 @@ def configure_logging(app) -> None:
     Safe to call more than once (e.g. under the reloader) since it
     replaces the handler list rather than appending to it.
     """
-    os.makedirs(LOG_DIR, exist_ok=True)
-
     level = getattr(logging, str(app.config.get("LOG_LEVEL", "INFO")).upper(), logging.INFO)
 
     formatter = logging.Formatter(
@@ -27,14 +25,27 @@ def configure_logging(app) -> None:
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    file_handler = RotatingFileHandler(LOG_FILE, maxBytes=5 * 1024 * 1024, backupCount=5)
-    file_handler.setFormatter(formatter)
-
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
+    
+    handlers = [console_handler]
+    
+    # Try to set up file logging. This will fail gracefully in read-only
+    # serverless environments like Vercel.
+    is_vercel = os.environ.get("VERCEL") == "1"
+    
+    if not is_vercel:
+        try:
+            os.makedirs(LOG_DIR, exist_ok=True)
+            file_handler = RotatingFileHandler(LOG_FILE, maxBytes=5 * 1024 * 1024, backupCount=5)
+            file_handler.setFormatter(formatter)
+            handlers.append(file_handler)
+        except OSError:
+            # Fallback to stdout only if read-only filesystem
+            pass
 
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
-    root_logger.handlers = [file_handler, console_handler]
+    root_logger.handlers = handlers
 
     app.logger.setLevel(level)

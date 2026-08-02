@@ -37,9 +37,19 @@ def create_app(env: str = "development") -> Flask:
     from utils.rbac import init_rbac
     init_rbac(app)
 
-    if app.config.get("SEED_SAMPLE_DATA", True):
-        with app.app_context():
-            seed_if_empty()
+    _startup_done = False
+    
+    @app.before_request
+    def _lazy_init():
+        nonlocal _startup_done
+        if not _startup_done:
+            try:
+                db.create_all()
+                if app.config.get("SEED_SAMPLE_DATA", False):
+                    seed_if_empty()
+            except Exception as e:
+                logger.error("Error during lazy initialization: %s", e)
+            _startup_done = True
 
     return app
 

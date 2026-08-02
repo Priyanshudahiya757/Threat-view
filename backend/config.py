@@ -19,8 +19,16 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "threatview-production-secure-jwt-secret-key-32bytes")
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
     JWT_ACCESS_TOKEN_EXPIRES  = int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES",  900))   # 15 min
-    _raw_db_url = os.environ.get("DATABASE_URL", "sqlite:///threatview.db")
-    if _raw_db_url.startswith("postgresql://"):
+    _raw_db_url = os.environ.get("DATABASE_URL")
+    if not _raw_db_url:
+        if os.environ.get("VERCEL") == "1":
+            _raw_db_url = "sqlite:////tmp/threatview.db"
+        else:
+            _raw_db_url = "sqlite:///threatview.db"
+            
+    if _raw_db_url.startswith("postgres://"):
+        _raw_db_url = _raw_db_url.replace("postgres://", "postgresql+psycopg://", 1)
+    elif _raw_db_url.startswith("postgresql://"):
         _raw_db_url = _raw_db_url.replace("postgresql://", "postgresql+psycopg://", 1)
     SQLALCHEMY_DATABASE_URI = _raw_db_url
     PHISHTANK_APP_KEY = os.environ.get("PHISHTANK_APP_KEY", "")
@@ -68,6 +76,7 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     DEBUG = False
+    SEED_SAMPLE_DATA = False
 
 
 class TestingConfig(Config):

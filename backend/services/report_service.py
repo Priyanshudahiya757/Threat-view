@@ -13,40 +13,49 @@ Layout
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
 
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.lib.units import inch, mm
-from reportlab.platypus import (
-    HRFlowable,
-    Paragraph,
-    SimpleDocTemplate,
-    Spacer,
-    Table,
-    TableStyle,
-)
+try:
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import inch, mm
+    from reportlab.platypus import (
+        HRFlowable,
+        Paragraph,
+        SimpleDocTemplate,
+        Spacer,
+        Table,
+        TableStyle,
+    )
+    
+    # ── Brand colours ──────────────────────────────────────────────────────────────
+    NAVY    = colors.HexColor("#0d1526")
+    BLUE    = colors.HexColor("#4c6fff")
+    BLUE_LT = colors.HexColor("#e8ecff")
+    SILVER  = colors.HexColor("#f1f5f9")
+    BORDER  = colors.HexColor("#cbd5e1")
+    TEXT    = colors.HexColor("#0f172a")
+    MUTED   = colors.HexColor("#64748b")
+    
+    SEV_COLORS = {
+        "critical": colors.HexColor("#f4415c"),
+        "high":     colors.HexColor("#f97316"),
+        "medium":   colors.HexColor("#f5a623"),
+        "low":      colors.HexColor("#3b82f6"),
+    }
+    
+    PAGE_W = A4[0] - 2 * 0.7 * inch   # usable width
+    
+    _REPORTLAB_AVAILABLE = True
+except ImportError:
+    _REPORTLAB_AVAILABLE = False
+    PAGE_W = 0
+    NAVY = BLUE = BLUE_LT = SILVER = BORDER = TEXT = MUTED = None
+    SEV_COLORS = {}
+
 from sqlalchemy import func
 
 from database.db import db
 from models.threat import Threat
-
-# ── Brand colours ──────────────────────────────────────────────────────────────
-NAVY    = colors.HexColor("#0d1526")
-BLUE    = colors.HexColor("#4c6fff")
-BLUE_LT = colors.HexColor("#e8ecff")
-SILVER  = colors.HexColor("#f1f5f9")
-BORDER  = colors.HexColor("#cbd5e1")
-TEXT    = colors.HexColor("#0f172a")
-MUTED   = colors.HexColor("#64748b")
-
-SEV_COLORS = {
-    "critical": colors.HexColor("#f4415c"),
-    "high":     colors.HexColor("#f97316"),
-    "medium":   colors.HexColor("#f5a623"),
-    "low":      colors.HexColor("#3b82f6"),
-}
-
-PAGE_W = A4[0] - 2 * 0.7 * inch   # usable width
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────

@@ -19,8 +19,6 @@ data scale) and returns the top-N threats with scores and feature values.
 import logging
 from datetime import datetime, timezone
 
-import numpy as np
-
 from models.threat import Threat
 
 logger = logging.getLogger(__name__)
@@ -145,7 +143,7 @@ def detect_anomalies(top_n: int = 50, contamination: float = 0.1) -> dict:
         for i in range(10)
     ]
 
-    total_anomalies = int(np.sum(predictions == -1))
+    total_anomalies = sum(1 for p in predictions if p == -1)
 
     return {
         "total_analyzed":    len(threats),
