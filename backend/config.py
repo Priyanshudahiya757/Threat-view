@@ -16,7 +16,7 @@ class Config:
     """Base config shared by every environment."""
 
     # --- Required (see .env.example) ---
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-key-change-me")
+    SECRET_KEY = os.environ.get("SECRET_KEY", "threatview-production-secure-jwt-secret-key-32bytes")
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", SECRET_KEY)
     JWT_ACCESS_TOKEN_EXPIRES  = int(os.environ.get("JWT_ACCESS_TOKEN_EXPIRES",  900))   # 15 min
     _raw_db_url = os.environ.get("DATABASE_URL", "sqlite:///threatview.db")

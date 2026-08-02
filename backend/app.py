@@ -25,7 +25,7 @@ def create_app(env: str = "development") -> Flask:
 
     db.init_app(app)
     migrate.init_app(app, db)
-    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+    CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=False)
     JWTManager(app)
     _init_swagger(app)
 
