@@ -69,13 +69,6 @@ def detect_anomalies(top_n: int = 50, contamination: float = 0.1) -> dict:
       "score_distribution": [{"bucket": str, "count": int}, ...]
     }
     """
-    try:
-        from sklearn.ensemble import IsolationForest
-        from sklearn.preprocessing import MinMaxScaler
-    except ImportError:
-        logger.error("scikit-learn is not installed. Run: pip install scikit-learn")
-        return {"error": "scikit-learn not installed", "total_analyzed": 0, "anomalies": []}
-
     threats = Threat.query.order_by(Threat.created_at.desc()).limit(5000).all()
     if len(threats) < 10:
         return {
@@ -86,26 +79,40 @@ def detect_anomalies(top_n: int = 50, contamination: float = 0.1) -> dict:
         }
 
     now = datetime.now(timezone.utc)
-    X = np.array([_feature_vector(t, now) for t in threats], dtype=float)
+    vectors = [_feature_vector(t, now) for t in threats]
 
-    # Handle NaN/inf (rare but possible with bad data)
-    X = np.nan_to_num(X, nan=0.0, posinf=100.0, neginf=0.0)
+    try:
+        from sklearn.ensemble import IsolationForest
+        from sklearn.preprocessing import MinMaxScaler
+        import numpy as np
 
-    model = IsolationForest(
-        n_estimators=100,
-        contamination=contamination,
-        random_state=42,
-        n_jobs=-1,
-    )
-    model.fit(X)
+        X = np.array(vectors, dtype=float)
+        X = np.nan_to_num(X, nan=0.0, posinf=100.0, neginf=0.0)
 
-    # raw_scores are negative; more negative = more anomalous
-    raw_scores  = model.decision_function(X)
-    predictions = model.predict(X)           # -1 = anomaly, 1 = normal
+        model = IsolationForest(n_estimators=100, contamination=contamination, random_state=42)
+        model.fit(X)
 
-    # Normalise to 0-100 (100 = most anomalous)
-    scaler     = MinMaxScaler()
-    norm_scores = scaler.fit_transform((-raw_scores).reshape(-1, 1)).flatten() * 100
+        raw_scores  = model.decision_function(X)
+        predictions = model.predict(X)
+        scaler      = MinMaxScaler()
+        norm_scores = scaler.fit_transform((-raw_scores).reshape(-1, 1)).flatten() * 100
+    except Exception as err:
+        logger.info("Using pure Python anomaly detector fallback (%s)", err)
+        # Pure Python statistical anomaly fallback
+        n_features = len(vectors[0])
+        means = [sum(v[i] for v in vectors) / len(vectors) for i in range(n_features)]
+        stds  = [(sum((v[i] - means[i]) ** 2 for v in vectors) / len(vectors)) ** 0.5 or 1.0 for i in range(n_features)]
+        
+        raw_scores = []
+        for v in vectors:
+            z_sum = sum(((v[i] - means[i]) / stds[i]) ** 2 for i in range(n_features))
+            raw_scores.append(z_sum)
+        
+        max_s = max(raw_scores) or 1.0
+        min_s = min(raw_scores)
+        norm_scores = [((s - min_s) / (max_s - min_s if max_s > min_s else 1.0)) * 100 for s in raw_scores]
+        cutoff = sorted(norm_scores, reverse=True)[int(len(norm_scores) * contamination)]
+        predictions = [-1 if s >= cutoff else 1 for s in norm_scores]
 
     # ── Build result list ─────────────────────────────────────────────────────
     combined = list(zip(threats, norm_scores, predictions))
