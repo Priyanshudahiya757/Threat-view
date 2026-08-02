@@ -8,11 +8,13 @@ scheduled interval.
 import logging
 from datetime import datetime, timezone
 
-from scheduler.jobs import run_alienvault_job, run_phishtank_job, run_urlhaus_job
+from scheduler.jobs import run_alienvault_job, run_feodotracker_job, run_phishtank_job, run_threatfox_job, run_urlhaus_job
 
 logger = logging.getLogger(__name__)
 
 _JOBS = (
+    ("FeodoTracker Live Feed", run_feodotracker_job),
+    ("ThreatFox Live Feed", run_threatfox_job),
     ("AlienVault OTX", run_alienvault_job),
     ("PhishTank", run_phishtank_job),
     ("URLhaus", run_urlhaus_job),

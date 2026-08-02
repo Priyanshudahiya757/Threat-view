@@ -88,16 +88,13 @@ def run_phishtank_job(app) -> dict:
 def run_urlhaus_job(app) -> dict:
     with app.app_context():
         logger.info("Starting URLhaus ingestion job")
-        if not app.config.get("URLHAUS_AUTH_KEY"):
-            logger.warning("Skipping URLhaus ingestion: URLHAUS_AUTH_KEY is not configured")
-            return {"inserted": 0, "updated": 0, "skipped": True}
         from ingestors.urlhaus_ingestor import URLhausIngestor
         from services.threat_service import upsert_threats
 
         ingestor = URLhausIngestor(
-            feed_url=app.config["URLHAUS_URL"],
-            auth_key=app.config["URLHAUS_AUTH_KEY"],
-            timeout=app.config["HTTP_TIMEOUT_SECONDS"],
+            feed_url=app.config.get("URLHAUS_URL", ""),
+            auth_key=app.config.get("URLHAUS_AUTH_KEY", ""),
+            timeout=app.config.get("HTTP_TIMEOUT_SECONDS", 15),
         )
         threats = ingestor.run()
         result = upsert_threats(threats) if threats else {"inserted": 0, "updated": 0}
@@ -106,5 +103,41 @@ def run_urlhaus_job(app) -> dict:
         logger.info(
             "Finished URLhaus ingestion job (%d indicators, inserted=%d updated=%d)",
             len(threats), result["inserted"], result["updated"],
+        )
+        return result
+
+
+def run_feodotracker_job(app) -> dict:
+    with app.app_context():
+        logger.info("Starting FeodoTracker live threat ingestion job")
+        from ingestors.feodotracker_ingestor import FeodoTrackerIngestor
+        from services.threat_service import upsert_threats
+
+        ingestor = FeodoTrackerIngestor(timeout=app.config.get("HTTP_TIMEOUT_SECONDS", 15))
+        threats = ingestor.run()
+        result = upsert_threats(threats) if threats else {"inserted": 0, "updated": 0}
+        if threats and (result.get("inserted", 0) > 0 or result.get("updated", 0) > 0):
+            _evaluate_alerts_for_source(threats[: result["inserted"] + result.get("updated", 0)])
+        logger.info(
+            "Finished FeodoTracker ingestion job (%d indicators, inserted=%d updated=%d)",
+            len(threats), result.get("inserted", 0), result.get("updated", 0),
+        )
+        return result
+
+
+def run_threatfox_job(app) -> dict:
+    with app.app_context():
+        logger.info("Starting ThreatFox live threat ingestion job")
+        from ingestors.threatfox_ingestor import ThreatFoxIngestor
+        from services.threat_service import upsert_threats
+
+        ingestor = ThreatFoxIngestor(days=1, timeout=app.config.get("HTTP_TIMEOUT_SECONDS", 15))
+        threats = ingestor.run()
+        result = upsert_threats(threats) if threats else {"inserted": 0, "updated": 0}
+        if threats and (result.get("inserted", 0) > 0 or result.get("updated", 0) > 0):
+            _evaluate_alerts_for_source(threats[: result["inserted"] + result.get("updated", 0)])
+        logger.info(
+            "Finished ThreatFox ingestion job (%d indicators, inserted=%d updated=%d)",
+            len(threats), result.get("inserted", 0), result.get("updated", 0),
         )
         return result

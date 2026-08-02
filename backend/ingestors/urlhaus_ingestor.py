@@ -1,12 +1,9 @@
 """Ingestor for abuse.ch's URLhaus recent-malware-URLs feed.
 
-abuse.ch requires an Auth-Key on every API call (free at
-https://auth.abuse.ch/) since their platform-wide authentication
-rollout -- requests without one are rejected with a 401.
-
-API reference: https://urlhaus.abuse.ch/api/
-Endpoint used here: GET /v1/urls/recent/limit/<n>/, header `Auth-Key`.
+Supports both API with Auth-Key and free public CSV export fallback
+(https://urlhaus.abuse.ch/downloads/csv_recent/) requiring no API key.
 """
+import csv
 import logging
 from typing import Any, Dict, List
 
@@ -17,35 +14,55 @@ from utils.threat_normalizer import classify_host
 
 logger = logging.getLogger(__name__)
 
+PUBLIC_CSV_URL = "https://urlhaus.abuse.ch/downloads/csv_recent/"
+
 
 class URLhausIngestor(BaseIngestor):
     source_name = "URLhaus"
 
-    def __init__(self, feed_url: str, auth_key: str, limit: int = 1000, timeout: int = 15):
-        self.feed_url = feed_url.rstrip("/")
+    def __init__(self, feed_url: str = "", auth_key: str = "", limit: int = 1000, timeout: int = 15):
+        self.feed_url = (feed_url or "").rstrip("/")
         self.auth_key = auth_key
         self.limit = limit
         self.timeout = timeout
         self.session = build_http_session()
 
     def fetch(self) -> Dict[str, Any]:
-        if not self.auth_key:
-            logger.warning("Skipping URLhaus fetch: URLHAUS_AUTH_KEY is not configured")
-            return {"query_status": "missing-auth-key", "urls": []}
+        # Option A: API key provided
+        if self.auth_key and self.feed_url:
+            url = f"{self.feed_url}/limit/{self.limit}/"
+            headers = {"Auth-Key": self.auth_key}
+            try:
+                response = self.session.get(url, headers=headers, timeout=self.timeout)
+                if response.status_code == 200:
+                    return response.json()
+            except Exception:
+                logger.warning("URLhaus API request failed, falling back to public feed", exc_info=True)
 
-        url = f"{self.feed_url}/limit/{self.limit}/"
-        headers = {"Auth-Key": self.auth_key}
+        # Option B: Public CSV fallback (Free, no key needed)
         try:
-            response = self.session.get(url, headers=headers, timeout=self.timeout)
+            response = self.session.get(PUBLIC_CSV_URL, timeout=self.timeout)
             response.raise_for_status()
+            lines = [line for line in response.text.splitlines() if not line.startswith("#")]
+            reader = csv.reader(lines)
+            urls = []
+            for row in reader:
+                if len(row) >= 8:
+                    # id, dateadded, url, url_status, last_online, threat, tags, reporter
+                    urls.append({
+                        "url": row[2],
+                        "url_status": row[3],
+                        "threat": row[5],
+                        "tags": [t.strip() for t in row[6].split(",") if t.strip()],
+                        "date_added": row[1],
+                    })
+            return {"query_status": "ok", "urls": urls[:self.limit]}
         except Exception:
-            logger.warning("URLhaus request failed for %s", url, exc_info=True)
+            logger.warning("URLhaus public feed request failed for %s", PUBLIC_CSV_URL, exc_info=True)
             return {"query_status": "unavailable", "urls": []}
-        return response.json()
 
     def normalize(self, raw_data: Dict[str, Any]) -> List[Dict[str, Any]]:
         if raw_data.get("query_status") != "ok":
-            logger.warning("URLhaus returned query_status=%s", raw_data.get("query_status"))
             return []
 
         threats = []
@@ -75,22 +92,5 @@ class URLhausIngestor(BaseIngestor):
                     last_seen=date_added,
                 )
             )
-
-            host = entry.get("host")
-            if host:
-                threats.append(
-                    build_threat_dict(
-                        indicator=host,
-                        indicator_type=classify_host(host),
-                        source=self.source_name,
-                        category=category,
-                        severity="medium",
-                        confidence=70,
-                        country=None,
-                        description=f"Host serving a malware distribution URL (tags: {tag_text})",
-                        first_seen=date_added,
-                        last_seen=date_added,
-                    )
-                )
 
         return threats

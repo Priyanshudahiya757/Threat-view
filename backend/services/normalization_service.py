@@ -143,7 +143,7 @@ def build_threat_dict(
     family = malware_family or category
 
     return {
-        "indicator": indicator.strip(),
+        "indicator": indicator.strip()[:500],
         "indicator_type": normalized_type,
         "source": source,
         "category": category,
